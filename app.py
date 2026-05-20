@@ -86,7 +86,6 @@ st.markdown(DARK_THEME_CSS, unsafe_allow_html=True)
 def ask_gemini_market_data(prompt: str) -> dict:
     """Uses Gemini 2.5 with Google Search grounding to fetch and parse live JSON data."""
     try:
-        # Attempts to read GEMINI_API_KEY from environment variables automatically
         client = genai.Client()
         response = client.models.generate_content(
             model='gemini-2.5-flash',
@@ -98,9 +97,10 @@ def ask_gemini_market_data(prompt: str) -> dict:
             ),
         )
         
-        # Completely bypasses regex to ensure line breaks don't cause syntax crashes
-        clean_text = response.text.replace("```json", "").replace("
-```", "").strip()
+        # BULLETPROOF STRIP: Uses triple quotes to protect against server auto-line wraps
+        raw_text = response.text
+        clean_text = raw_text.replace("""```json""", """""").replace("""
+```""", """""").strip()
         return json.loads(clean_text)
     except Exception as e:
         st.error(f"Failed to fetch market data from API: {str(e)}")
@@ -265,7 +265,6 @@ def main():
         st.markdown("### 🕵️ Institutional Wyckoff Accumulation Analytics")
         df_acc = pd.DataFrame(analysis['topAccumulation'])
         
-        # Displaying metric breakdown visually inside Python container rows
         for _, row in df_acc.iterrows():
             with st.container():
                 st.markdown(f"#### {row['symbol']} — `{row['signal']}`")
@@ -320,7 +319,6 @@ def main():
         st.markdown("### 📈 Live Query Snapshot Matrix Profiles")
         df_stocks = pd.DataFrame(market['stocks'])
         
-        # Format metrics beautifully via pandas transforms
         df_stocks['ltp'] = df_stocks['ltp'].map(lambda x: f"Rs. {x:,.2f}")
         df_stocks['turnover'] = df_stocks['turnover'].map(fmt_currency)
         df_stocks['volume'] = df_stocks['volume'].map(lambda x: f"{x:,}")
