@@ -1,6 +1,5 @@
 import os
 import json
-import re
 import streamlit as st
 import pandas as pd
 from google import genai
@@ -99,9 +98,9 @@ def ask_gemini_market_data(prompt: str) -> dict:
             ),
         )
         
-        # Strip out markdown block elements cleanly on one line
-        clean_text = re.sub(r'```json|
-```', '', response.text).strip()
+        # Completely bypasses regex to ensure line breaks don't cause syntax crashes
+        clean_text = response.text.replace("```json", "").replace("
+```", "").strip()
         return json.loads(clean_text)
     except Exception as e:
         st.error(f"Failed to fetch market data from API: {str(e)}")
@@ -340,4 +339,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
