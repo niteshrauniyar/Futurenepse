@@ -84,23 +84,30 @@ st.markdown(DARK_THEME_CSS, unsafe_allow_html=True)
 # ─── GenAI API Wrapper Client ────────────────────────────────────────────────
 @st.cache_data(ttl=600)  # Cache results for 10 minutes to save API tokens
 def ask_gemini_market_data(prompt: str) -> dict:
-    """Uses Gemini 2.5 with Google Search grounding to fetch and parse live JSON data."""
+    """Uses Gemini 2.5 with Google Search grounding to fetch live data without throwing a 400 error."""
     try:
         client = genai.Client()
         response = client.models.generate_content(
             model='gemini-2.5-flash',
             contents=prompt,
             config=types.GenerateContentConfig(
-                tools=[{"google_search": {}}],  # Turn on real-time internet search
-                temperature=0.1,
-                response_mime_type="application/json" # Enforce strict structured JSON payload output
+                tools=[{"google_search": {}}],  # Live search validation turned ON
+                temperature=0.1                 # Low temperature ensures it adheres strictly to structural demands
+                # Note: response_mime_type removed to prevent the 400 conflict error
             ),
         )
         
-        # BULLETPROOF STRIP: Uses triple quotes to protect against server auto-line wraps
-        raw_text = response.text
-        clean_text = raw_text.replace("""```json""", """""").replace("""
-```""", """""").strip()
+        # Robust parsing cleanup system: Extracts raw JSON even if wrapped inside markdown code blocks
+        text_content = response.text
+        
+        # Clean up code blocks if present
+        if "```json" in text_content:
+            text_content = text_content.split("```json")[1].split("```")[0]
+        elif "```" in text_content:
+            text_content = text_content.split("
+```")[1].split("```")[0]
+            
+        clean_text = text_content.strip()
         return json.loads(clean_text)
     except Exception as e:
         st.error(f"Failed to fetch market data from API: {str(e)}")
@@ -113,6 +120,8 @@ def get_market_data_prompt():
     Fetch the LIVE or MOST RECENT data for these stocks: NABIL, NICA, NBL, ADBL, SBL, UPPER, NHPC, RIDI, HIDCLP, BJHL.
     For each stock provide: symbol, lastTradedPrice (LTP), percentChange, volume, turnover.
     Also provide: NEPSE Index value, total market turnover today, market status (Open/Closed).
+    
+    CRITICAL: You must return ONLY valid, raw JSON. Do not include introductory text, conversational notes, or explanations.
     
     Return EXACTLY this JSON template structure:
     {
@@ -131,7 +140,11 @@ def get_analysis_prompt(stock_list_str):
     return f"""
     You are a NEPSE smart money analyst. Based on this live market data: {stock_list_str}
     Search for latest NEPSE broker activity and institutional flow on nepsealpha.com or sharesansar.com.
-    Generate institutional intelligence analysis. Return EXACTLY this structured JSON format:
+    Generate institutional intelligence analysis. 
+    
+    CRITICAL: You must return ONLY valid, raw JSON. Do not include conversational notes or explanations.
+    
+    Return EXACTLY this structured JSON format:
     {{
       "topAccumulation": [
         {{"symbol":"NHPC","score":88,"signal":"Strong Accumulation","wyckoff":"Spring","ofi":0.72,"brokerConc":68,"insight":"Pre-monsoon institutional loading."}}
