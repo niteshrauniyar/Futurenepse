@@ -3,8 +3,6 @@ import json
 import re
 import streamlit as st
 import pandas as pd
-# Assuming you use Google GenAI SDK for the web search/data generation piece
-# PIP install: pip install google-genai streamlit pandas
 from google import genai
 from google.genai import types
 
@@ -16,7 +14,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Custom CSS injected directly to replicate your dark cyberpunk theme
+# Custom CSS injected directly to replicate the dark cyberpunk theme
 DARK_THEME_CSS = """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap');
@@ -84,12 +82,12 @@ DARK_THEME_CSS = """
 """
 st.markdown(DARK_THEME_CSS, unsafe_allow_html=True)
 
-# ─── GenAI API Wrapper Client (Bypassing CORS natively via Python) ────────────
-# Ensure GEMINI_API_KEY is set in your environment variables
+# ─── GenAI API Wrapper Client ────────────────────────────────────────────────
 @st.cache_data(ttl=600)  # Cache results for 10 minutes to save API tokens
 def ask_gemini_market_data(prompt: str) -> dict:
     """Uses Gemini 2.5 with Google Search grounding to fetch and parse live JSON data."""
     try:
+        # Attempts to read GEMINI_API_KEY from environment variables automatically
         client = genai.Client()
         response = client.models.generate_content(
             model='gemini-2.5-flash',
@@ -101,7 +99,7 @@ def ask_gemini_market_data(prompt: str) -> dict:
             ),
         )
         
-        # Strip out markdown block elements if present
+        # Strip out markdown block elements cleanly on one line
         clean_text = re.sub(r'```json|
 ```', '', response.text).strip()
         return json.loads(clean_text)
@@ -247,7 +245,7 @@ def main():
             for _, row in df_acc.iterrows():
                 st.markdown(f"""
                     <div style="background:#0c1020; padding:12px; border:1px solid #1e2d4a; margin-bottom:8px;">
-                        <div style="display:flex; justify-content:between; align-items:center;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
                             <span style="font-size:16px; font-weight:bold; color:#eef4ff;">{row['symbol']}</span>
                             <span style="font-size:11px; background:rgba(29,219,139,0.1); color:#1ddb8b; padding:2px 6px; border:1px solid #1ddb8b;">{row['signal']}</span>
                         </div>
@@ -286,7 +284,7 @@ def main():
             df_sec, 
             column_config={
                 "score": st.column_config.ProgressColumn("Institutional Score Weights", min_value=0, max_value=100),
-                "sector": "Market Sector Sector",
+                "sector": "Market Sector",
                 "flow": "Net Flow Vector Status",
                 "change": "7-Day Delta Evolution"
             },
